@@ -3,7 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Ćaći Dodge 2026</title>
+    
+    <!-- Naslov i Meta tagovi za Instagram / Facebook / WhatsApp deljenje -->
+    <title>IZBORI 2D26</title>
+    <meta property="og:title" content="IZBORI 2D26">
+    <meta property="og:description" content="16-bitna retro arkadna igrica - Izbori 2026!">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="IZBORI 2D26">
+    <meta name="twitter:description" content="16-bitna retro arkadna igrica - Izbori 2026!">
+
     <style>
         * {
             box-sizing: border-box;
@@ -96,7 +105,7 @@
         loadSprite("indeks", "index.png");
         loadSprite("trava", "bg.jpeg");
         loadSound("bgm", "bgm.mp3");
-        loadSound("cashin", "cashin.mp3"); // Učitavanje zvuka sakupljanja novca
+        loadSound("cashin", "cashin.mp3");
 
         let bgmMusic = null;
         let isMuted = false;
@@ -338,7 +347,6 @@
                 score += 25;
                 scoreLabel.text = "POENI: " + score;
 
-                // Puštanje zvuka sakupljanja novca samo za Aleksa i Ivcu
                 if (charSprite !== "ilija") {
                     play("cashin", { volume: isMuted ? 0 : 0.18 });
                 }
