@@ -17,6 +17,9 @@
         * {
             box-sizing: border-box;
             touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
         body {
             margin: 0;
@@ -32,26 +35,75 @@
             height: 100vh;
             overflow: hidden;
         }
-        /* Prilagođeno platno igre sa lepim retro okvirom */
+
+        /* Kontejner za igru koji drži platno i Mute dugme zajedno */
+        .game-container {
+            position: relative;
+            width: auto;
+            height: auto;
+            max-width: 92vw;
+            max-height: 88vh;
+            aspect-ratio: 400 / 700;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Platno igre sa retro okvirom */
         canvas {
-            width: auto !important;
-            height: auto !important;
-            max-width: 92vw !important;
-            max-height: 88vh !important;
-            aspect-ratio: 400 / 700 !important;
+            width: 100% !important;
+            height: 100% !important;
             border-radius: 12px;
             box-shadow: 0 0 30px rgba(0, 0, 0, 0.9), inset 0 0 15px rgba(0, 0, 0, 0.5);
             border: 4px solid #2d2218;
             object-fit: contain;
+            display: block;
+        }
+
+        /* HTML Mute dugme na vrhu platna */
+        #mute-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.45);
+            border: 2px solid #2d2218;
+            border-radius: 8px;
+            padding: 4px;
+            cursor: pointer;
+            z-index: 9999;
+            touch-action: manipulation;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            outline: none;
+        }
+        #mute-btn:active {
+            transform: scale(0.92);
+        }
+        #mute-icon {
+            width: 32px;
+            height: 32px;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            pointer-events: none;
+            display: block;
         }
     </style>
 </head>
 <body>
 
+    <div class="game-container">
+        <canvas id="game-canvas"></canvas>
+        <button id="mute-btn" title="Zvuk">
+            <img id="mute-icon" src="sound_on.png" alt="Zvuk">
+        </button>
+    </div>
+
     <script src="https://unpkg.com/kaboom@3000.1.17/dist/kaboom.js"></script>
 
     <script>
         kaboom({
+            canvas: document.getElementById("game-canvas"),
             width: 400,
             height: 700,
             letterbox: false,
@@ -104,13 +156,46 @@
         loadSprite("novac", "money.png");
         loadSprite("indeks", "index.png");
         loadSprite("trava", "bg.jpeg");
+
         loadSound("bgm", "bgm.mp3");
         loadSound("cashin", "cashin.mp3");
 
         let bgmMusic = null;
         let isMuted = false;
 
-        // Pokretanje muzike ispočetka
+        // Kontrola Mute dugmeta
+        const muteBtn = document.getElementById("mute-btn");
+        const muteIcon = document.getElementById("mute-icon");
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            if (muteIcon) {
+                muteIcon.src = isMuted ? "sound_off.png" : "sound_on.png";
+            }
+            if (bgmMusic) {
+                bgmMusic.volume = isMuted ? 0 : 0.28;
+            }
+        }
+
+        if (muteBtn) {
+            muteBtn.addEventListener("click", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleMute();
+            });
+            muteBtn.addEventListener("touchstart", (e) => {
+                e.stopPropagation();
+            }, { passive: true });
+        }
+
+        // Odblokiranje zvuka za mobilne pretraživače na prvi dodir ekrana
+        window.addEventListener("pointerdown", () => {
+            if (kaboomAudioContext && kaboomAudioContext.state === "suspended") {
+                kaboomAudioContext.resume();
+            }
+        }, { once: true });
+
+        // Pokretanje muzike
         function startujMuziku() {
             if (!bgmMusic) {
                 try {
@@ -119,38 +204,17 @@
                         volume: isMuted ? 0 : 0.28
                     });
                 } catch (e) {
-                    console.log("Autoplay sačekao dodir igrača.");
+                    console.log("Autoplay čeka dodir ekrana na mobilnom.");
                 }
             }
         }
 
-        // Potpuno zaustavljanje muzike
+        // Zaustavljanje muzike
         function zaustaviMuziku() {
             if (bgmMusic) {
                 bgmMusic.stop();
                 bgmMusic = null;
             }
-        }
-
-        // Mute / Unmute dugme u uglu ekrana
-        function dodajMuteDugme() {
-            const btn = add([
-                text(isMuted ? "🔇" : "🔊", { size: 20 }),
-                pos(365, 25),
-                anchor("center"),
-                area({ scale: vec2(1.5, 1.5) }),
-                fixed(),
-                z(1000),
-                "muteBtn"
-            ]);
-
-            btn.onClick(() => {
-                isMuted = !isMuted;
-                if (bgmMusic) {
-                    bgmMusic.volume = isMuted ? 0 : 0.28;
-                }
-                btn.text = isMuted ? "🔇" : "🔊";
-            });
         }
 
         // Skrolujuća pozadina sa fiksiranim dimenzijama
@@ -193,7 +257,6 @@
         // 1. IZBOR LIKA
         scene("select", () => {
             drawStaticnuPozadinu();
-            dodajMuteDugme();
 
             napraviTekstSaIvicom("IZABERI HEROJA", 200, 90, 26, rgb(255, 220, 0));
 
@@ -240,7 +303,6 @@
         // 2. SCENA IGRE
         scene("game", ({ charSprite }) => {
             dodajSkrolujucuPozadinu(200);
-            dodajMuteDugme();
 
             let score = 0;
 
@@ -268,7 +330,7 @@
                 player.pos.x = Math.min(365, player.pos.x + 500 * dt());
             });
 
-            // Kontrole dodir / miš
+            // Kontrole dodir na ekranu / miš (prevlačenje prstom)
             onUpdate(() => {
                 if (isMouseDown()) {
                     player.pos.x = clamp(mousePos().x, 35, 365);
@@ -362,7 +424,6 @@
         // 3. GAME OVER EKRAN
         scene("gameover", ({ score }) => {
             drawStaticnuPozadinu();
-            dodajMuteDugme();
 
             napraviTekstSaIvicom("KRAJ IGRE!", 200, 250, 32, rgb(255, 60, 60));
             napraviTekstSaIvicom(`POENI: ${score}`, 200, 320, 24, rgb(255, 220, 0));
